@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassChat | Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>CLASS CHAT</h3>
+            </div>
+            
+            <nav id="channelList" class="scroller">
+                <div class="channel-group">TEXT CHANNELS</div>
+                </nav>
+
+            <div class="user-panel">
+                <div class="user-avatar" id="myPfp"></div>
+                <div class="user-details">
+                    <span id="displayUser"></span>
+                    <span class="status">Online</span>
+                </div>
+                <button onclick="logout()" class="log-btn">Log Out</button>
+            </div>
+        </aside>
+
+        <main class="chat-viewport">
+            <header class="chat-top-bar">
+                <div class="header-info">
+                    <span class="hash">#</span>
+                    <h2 id="roomTitle">chat</h2>
+                </div>
+                <div id="typingIndicator"></div>
+            </header>
+
+            <div id="messages" class="message-pane"></div>
+
+            <div class="input-area">
+                <div class="input-box">
+                    <input type="file" id="fileInp" hidden onchange="handleFileUpload(this)">
+                    <button class="plus-btn" onclick="document.getElementById('fileInp').click()">+</button>
+                    <input id="msgInput" placeholder="Message #chat" autocomplete="off">
+                    <button id="sendBtn">➔</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC-MzFHtQLrwh8Ds5u5YOe-wk-D9UPk94k",
+            authDomain: "class-chat-d8a0c.firebaseapp.com",
+            databaseURL: "https://class-chat-d8a0c-default-rtdb.firebaseio.com",
+            projectId: "class-chat-d8a0c",
+            storageBucket: "class-chat-d8a0c.firebasestorage.app",
+            messagingSenderId: "699485801199",
+            appId: "1:699485801199:web:66ca3c98f29d6f0d2f291a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const storage = getStorage(app);
+
+        const username = localStorage.getItem("username");
+        const gender = localStorage.getItem("gender");
+        const adminName = "Taransh"; 
+        
+        if (!username) window.location.href = "index.html";
+        document.getElementById("displayUser").innerText = username;
+
+        let currentRoom = "chat";
+
+        function getPfpColor(name) {
+            const colors = ['#5865f2', '#ed4245', '#3ba55c', '#faa61a', '#eb459e'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        document.getElementById("myPfp").style.backgroundColor = getPfpColor(username);
+        document.getElementById("myPfp").innerText = username[0].toUpperCase();
+
+        const rooms = [
+            { id: "chat", name: "chat", access: "all" },
+            { id: "homework", name: "homework", access: "all" },
+            { id: "gaming", name: "gaming", access: "all" },
+            { id: "girls-only", name: "girls-only", access: "girl" },
+            { id: "boys-only", name: "boys-only", access: "boy" }
+        ];
+
+        function renderSidebar() {
+            const list = document.getElementById("channelList");
+            list.innerHTML = '<div class="channel-group">TEXT CHANNELS</div>';
+            rooms.forEach(room => {
+                const canAccess = room.access === "all" || room.access === gender || username === adminName;
+                if (canAccess) {
+                    const btn = document.createElement("button");
+                    btn.className = `chan-btn ${currentRoom === room.id ? 'active' : ''}`;
+                    btn.innerHTML = `<span>#</span> ${room.name}`;
+                    btn.onclick = () => changeRoom(room.id, room.name);
+                    list.appendChild(btn);
+                }
+            });
+        }
+
+        window.changeRoom = (id, name) => {
+            currentRoom = id;
+            document.getElementById("roomTitle").innerText = name;
+            document.getElementById("msgInput").placeholder = `Message #${name}`;
+            renderSidebar();
+
+            onValue(ref(db, `rooms/${id}`), (snap) => {
+                const container = document.getElementById("messages");
+                container.innerHTML = "";
+                const data = snap.val();
+                if (data) Object.entries(data).forEach(([mid, msg]) => renderMessage(mid, msg));
+                container.scrollTop = container.scrollHeight;
+            });
+        };
+
+        function renderMessage(id, data) {
+            const isMe = data.user === username;
+            const isOwner = data.user === adminName;
+            const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            let reacts = "";
+            if (data.reactions) {
+                Object.entries(data.reactions).forEach(([emoji, count]) => {
+                    reacts += `<div class="pill" onclick="addReaction('${id}', '${emoji}')">${emoji} <span>${count}</span></div>`;
+                });
+            }
+
+            const div = document.createElement("div");
+            div.className = "msg-group";
+            div.innerHTML = `
+                <div class="msg-pfp" style="background-color: ${getPfpColor(data.user)}">${data.user[0].toUpperCase()}</div>
+                <div class="msg-text-area">
+                    <div class="msg-header">
+                        <span class="u-name ${isMe ? 'is-me' : ''}">${data.user}</span>
+                        ${isOwner ? '<span class="owner-tag">OWNER</span>' : ''}
+                        <span class="u-time">${time}</span>
+                    </div>
+                    ${data.image ? `<img src="${data.image}" class="msg-img">` : `<p class="msg-body">${data.text}</p>`}
+                    <div class="react-row">${reacts}</div>
+                </div>
+                <div class="msg-hover-tools">
+                    <button onclick="addReaction('${id}', '🔥')">🔥</button>
+                    <button onclick="addReaction('${id}', '💀')">💀</button>
+                    <button onclick="addReaction('${id}', '❤️')">❤️</button>
+                    ${isMe || username === adminName ? `<button onclick="deleteMsg('${id}')">🗑️</button>` : ''}
+                </div>
+            `;
+            document.getElementById("messages").appendChild(div);
+        }
+
+        window.sendMessage = async () => {
+            const inp = document.getElementById("msgInput");
+            if (!inp.value.trim()) return;
+            await push(ref(db, `rooms/${currentRoom}`), { user: username, text: inp.value, timestamp: Date.now() });
+            inp.value = "";
+        };
+
+        window.addReaction = (id, emoji) => {
+            runTransaction(ref(db, `rooms/${currentRoom}/${id}/reactions/${emoji}`), c => (c || 0) + 1);
+        };
+
+        window.deleteMsg = (id) => { if(confirm("Delete?")) remove(ref(db, `rooms/${currentRoom}/${id}`)); };
+        window.logout = () => { localStorage.clear(); window.location.href = "index.html"; };
+
+        document.getElementById("sendBtn").onclick = sendMessage;
+        document.getElementById("msgInput").onkeypress = (e) => { if(e.key === "Enter") sendMessage(); };
+        
+        changeRoom('chat', 'chat');
+    </script>
+</body>
+</html>

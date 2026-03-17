@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassChat | Welcome</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>Welcome back!</h1>
+                <p>We're so excited to see you again!</p>
+            </div>
+            
+            <div class="auth-form">
+                <div class="input-group">
+                    <label>USERNAME</label>
+                    <input id="username" type="text" autocomplete="off">
+                </div>
+
+                <div class="input-group">
+                    <label>GENDER</label>
+                    <select id="gender">
+                        <option value="" disabled selected>Select your gender</option>
+                        <option value="boy">Boy</option>
+                        <option value="girl">Girl</option>
+                    </select>
+                </div>
+
+                <button onclick="join()" class="auth-btn">Log In</button>
+                <div class="auth-footer">
+                    <span>Need an account?</span> <a href="#">Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect if already logged in
+        if (localStorage.getItem("username")) window.location.href = "chat.html";
+
+        function join() {
+            const user = document.getElementById("username").value.trim();
+            const gen = document.getElementById("gender").value;
+            
+            if (!user) {
+                alert("Please enter a username.");
+                return;
+            }
+            if (!gen) {
+                alert("Please select your gender.");
+                return;
+            }
+
+            localStorage.setItem("username", user);
+            localStorage.setItem("gender", gen);
+            window.location.href = "chat.html";
+        }
+    </script>
+</body>
+</html>
