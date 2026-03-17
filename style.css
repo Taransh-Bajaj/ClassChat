@@ -160,3 +160,23 @@ body { margin: 0; background: #1e1f22; color: var(--text-main); height: 100vh; o
     background: #ed4245; /* Discord Red */
     box-shadow: 0 0 8px rgba(237, 66, 69, 0.4);
 }
+/* This handles the gold background for ! messages */
+.announcement-style {
+    background-color: rgba(255, 170, 0, 0.1) !important;
+    border-left: 5px solid #ffaa00 !important;
+}
+
+/* This handles the blue text for @mentions */
+.mention {
+    background-color: rgba(88, 101, 242, 0.3);
+    color: #cbd3ff !important;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 700;
+}
+
+/* Make the text extra bold in announcements */
+.announcement-style .msg-body {
+    color: #ffffff;
+    font-weight: 700;
+}

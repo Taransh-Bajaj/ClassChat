@@ -179,6 +179,51 @@
         document.getElementById("msgInput").onkeypress = (e) => { if(e.key === "Enter") sendMessage(); };
         
         changeRoom('chat', 'chat');
+function renderMessage(id, data) {
+    const isMe = data.user === username;
+    const isOwner = data.user === adminName;
+    const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let rawText = data.text || "";
+    let isAnnouncement = false;
+
+    // 1. FORCE CHECK FOR ANNOUNCEMENT
+    if (isOwner && rawText.startsWith("!")) {
+        isAnnouncement = true;
+        rawText = rawText.substring(1); // Remove the !
+    }
+
+    // 2. FORCE CHECK FOR MENTIONS
+    // This looks for @ followed by any letters/numbers
+    let processedText = rawText.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+
+    const container = document.getElementById("messages");
+    const div = document.createElement("div");
+    
+    // 3. APPLY CLASSES
+    div.className = isAnnouncement ? "msg-group announcement-style" : "msg-group";
+    div.id = id;
+
+    div.innerHTML = `
+        <div class="msg-pfp" style="background-color: ${getPfpColor(data.user)}">${data.user[0].toUpperCase()}</div>
+        <div class="msg-text-area">
+            <div class="msg-header">
+                <span class="u-name ${isMe ? 'is-me' : ''}">${data.user}</span>
+                ${isOwner ? '<span class="owner-tag">OWNER</span>' : ''}
+                <span class="u-time">${time}</span>
+            </div>
+            <p class="msg-body">${processedText}</p>
+        </div>
+        <div class="msg-hover-tools">
+            <button onclick="addReaction('${id}', '🔥')">🔥</button>
+            <button onclick="addReaction('${id}', '❤️')">❤️</button>
+            ${isMe || isOwner ? `<button onclick="deleteMsg('${id}')">🗑️</button>` : ''}
+        </div>
+    `;
+    container.appendChild(div);
+}
+
     </script>
+    
 </body>
 </html>
